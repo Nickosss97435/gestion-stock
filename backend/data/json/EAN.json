@@ -1,0 +1,252 @@
+{
+    "COD_POS": [
+        [
+            {
+                "code_postal": "97400",
+                "commune": "Saint-Denis"
+            },
+            {
+                "code_postal": "97410",
+                "commune": "Saint-Pierre"
+            },
+            {
+                "code_postal": "97411",
+                "commune": "Saint-Pierre"
+            },
+            {
+                "code_postal": "97412",
+                "commune": "Saint-Pierre"
+            },
+            {
+                "code_postal": "97413",
+                "commune": "Saint-Pierre"
+            },
+            {
+                "code_postal": "97414",
+                "commune": "Saint-Pierre"
+            },
+            {
+                "code_postal": "97416",
+                "commune": "Le Tampon"
+            },
+            {
+                "code_postal": "97417",
+                "commune": "La Possession"
+            },
+            {
+                "code_postal": "97418",
+                "commune": "Saint-Paul"
+            },
+            {
+                "code_postal": "97419",
+                "commune": "La Possession"
+            },
+            {
+                "code_postal": "97420",
+                "commune": "Le Port"
+            },
+            {
+                "code_postal": "97421",
+                "commune": "Saint-Paul"
+            },
+            {
+                "code_postal": "97422",
+                "commune": "Saint-Paul"
+            },
+            {
+                "code_postal": "97423",
+                "commune": "Saint-Paul"
+            },
+            {
+                "code_postal": "97424",
+                "commune": "Saint-Paul"
+            },
+            {
+                "code_postal": "97425",
+                "commune": "Les Avirons"
+            },
+            {
+                "code_postal": "97426",
+                "commune": "Les Trois-Bassins"
+            },
+            {
+                "code_postal": "97427",
+                "commune": "Étang-Salé"
+            },
+            {
+                "code_postal": "97429",
+                "commune": "Petite-Île"
+            },
+            {
+                "code_postal": "97430",
+                "commune": "Le Tampon"
+            },
+            {
+                "code_postal": "97431",
+                "commune": "La Plaine-des-Palmistes"
+            },
+            {
+                "code_postal": "97432",
+                "commune": "Saint-Joseph"
+            },
+            {
+                "code_postal": "97433",
+                "commune": "Saint-Joseph"
+            },
+            {
+                "code_postal": "97434",
+                "commune": "Saint-Philippe"
+            },
+            {
+                "code_postal": "97435",
+                "commune": "Saint-Benoît"
+            },
+            {
+                "code_postal": "97436",
+                "commune": "Saint-Leu"
+            },
+            {
+                "code_postal": "97437",
+                "commune": "Bras-Panon"
+            },
+            {
+                "code_postal": "97438",
+                "commune": "Sainte-Marie"
+            },
+            {
+                "code_postal": "97439",
+                "commune": "Sainte-Rose"
+            },
+            {
+                "code_postal": "97440",
+                "commune": "Saint-André"
+            },
+            {
+                "code_postal": "97441",
+                "commune": "Sainte-Suzanne"
+            },
+            {
+                "code_postal": "97442",
+                "commune": "Saint-Benoît"
+            },
+            {
+                "code_postal": "97450",
+                "commune": "Saint-Louis"
+            },
+            {
+                "code_postal": "97460",
+                "commune": "Saint-Paul"
+            },
+            {
+                "code_postal": "97470",
+                "commune": "Saint-Benoît"
+            },
+            {
+                "code_postal": "97480",
+                "commune": "Saint-Joseph"
+            },
+            {
+                "code_postal": "97490",
+                "commune": "Saint-Denis"
+            }
+        ]
+    ],
+    "BDU_STE": [
+        [
+            {
+                "EPR": [
+                    {
+                        "Dépôt":"S01",
+                        "code_postal": "97420",
+                        "commune": "Le Port"
+                    },
+                    {
+                        "Dépôt":"S02",
+                        "code_postal": "97410",
+                        "commune": "Saint-Pierre"
+                    },
+                    {
+                        "Dépôt":"S03",
+                        "code_postal": "97490",
+                        "commune": "Saint-Denis"
+                    },
+                    {
+                        "Dépôt":"S04",
+                        "code_postal": "97440",
+                        "commune": "Saint-André"
+                    },
+                    {
+                        "Dépôt":"L04",
+                        "code_postal": "97440",
+                        "commune": "Saint-André"
+                    }
+                ]
+            },
+            {
+                "GMR": [
+                    {
+                        "Dépôt":"S01",
+                        "code_postal": "97420",
+                        "commune": "Le Port"
+                    },
+                    {
+                        "Dépôt":"C01"
+                    }
+                ]
+            },
+            {
+                "CPR": [
+                    {
+                        "Dépôt":"S01",
+                        "code_postal": "97438",
+                        "commune": "Sainte-Marie"
+                    },
+                    {
+                        "Dépôt":"S02",
+                        "code_postal": "97410",
+                        "commune": "Saint-Pierre"
+                    },
+                    {
+                        "Dépôt":"C01"
+                    }
+                ]
+            }
+        ]
+      
+    ],
+    "EAN_MOV":[
+        [
+            {
+            "entree": "9780201379624"
+            },
+            {
+            "sortie": "5901234123457"
+            }
+        ]
+    ],
+    "EAN_PAL": [
+      "9742016101001",
+      "9742016101002",
+      "9742016101003",
+      "9742016101004",
+      "9742016101005",
+      "9742016101006",
+      "9742016101007",
+      "9742016101008",
+      "9742016101009",
+      "9742016101010"
+    ],
+    "EAN_LOC": [
+      "9742012010100", 
+      "9742012010102",
+      "9742012010103",
+      "9742012010104",
+      "9742012010105",
+      "9742012010106",
+      "9742012010107",
+      "9742012010108",
+      "9742012010109",
+      "9742012010201",
+      "9742012012699"
+    ]
+}
