@@ -318,7 +318,7 @@ if (existingProductIndex !== -1) {
     ART_DPT_L,
     ART_SFA,
     ART_SFA_L,
-    ART_FAM_L,
+    // ART_FAM_L,
     ART_UNV_L,
     CAT_RFF,
     CAT_DSF,
@@ -330,7 +330,7 @@ if (existingProductIndex !== -1) {
     CAT_POI,
     [`${depot}_QTE`]: quantity.toString(),
     ART_PAL,
-    NOM_FOU: FOU_NOM, // Ajouter le fournisseur ici
+    FOU_NOM, // Ajouter le fournisseur ici
     ART_LOC,
   });
 }
