@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
-function StockListe() {
+function SearchStock() {
   const [materiaux, setMateriaux] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -13,8 +13,8 @@ function StockListe() {
   const [referencefour, setReferencefour] = useState('');
   const [designation, setDesignation] = useState('');
   const [codeBarre, setCodeBarre] = useState('');
-  const [palettes, setPalettes] = useState(''); // Champ pour Palette
-  const [locations, setLocations] = useState(''); // Champ pour Emplacement
+  const [palettes, setPalettes] = useState('');
+  const [locations, setLocations] = useState('');
 
   // État pour la liste des dépôts disponibles
   const [depots, setDepots] = useState([]);
@@ -90,7 +90,7 @@ function StockListe() {
     materiaux.stock &&
     Array.isArray(materiaux.stock)
       ? materiaux.stock.slice().sort((a, b) => {
-          if (!sortColumn) return 0; // Pas de tri
+          if (!sortColumn) return 0;
           const valueA =
             sortColumn === 'totalValue'
               ? parseFloat(a[sortColumn])
@@ -109,9 +109,68 @@ function StockListe() {
           return sortOrder === 'asc' ? valueA - valueB : valueB - valueA;
         })
       : [];
+      // Exporter le fichier Excel
+  const handleExport = async () => {
+    if (!societe || !depot) {
+      alert('Veuillez sélectionner une société et un dépôt.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await axios.post(
+        'http://10.10.0.20:5000/api/v1/stock/export-stock',
+        { societe, depot },
+        { responseType: 'arraybuffer' } // Pour recevoir le fichier binaire
+      );
+
+      // Créer un lien de téléchargement pour le fichier Excel
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${societe}_${depot}_Export.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      alert('Export réussi.');
+    } catch (error) {
+      console.error('Erreur lors de l\'exportation du fichier :', error);
+      alert(error.response?.data?.error || 'Une erreur est survenue lors de l\'exportation.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Gérer les changements dans les champs du formulaire avec conversion en majuscules
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    // Convertir automatiquement en majuscules
+    const uppercasedValue = value.toUpperCase();
+
+    if (name === 'societe') {
+      setSociete(uppercasedValue);
+      setDepot(''); // Réinitialiser le dépôt lorsqu'une nouvelle société est sélectionnée
+    } else if (name === 'depot') {
+      setDepot(uppercasedValue);
+    } else if (name === 'reference') {
+      setReference(uppercasedValue);
+    } else if (name === 'referencefour') {
+      setReferencefour(uppercasedValue);
+    } else if (name === 'designation') {
+      setDesignation(uppercasedValue);
+    } else if (name === 'codeBarre') {
+      setCodeBarre(uppercasedValue);
+    } else if (name === 'palettes') {
+      setPalettes(uppercasedValue);
+    } else if (name === 'locations') {
+      setLocations(uppercasedValue);
+    }
+  };
 
   return (
-    <div>
+    <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Recherche d'Articles</h1>
 
       {/* Formulaire de filtrage */}
@@ -205,7 +264,14 @@ function StockListe() {
           Valider
         </button>
       </form>
-
+      {/* Bouton pour exporter le fichier Excel */}
+      <button
+        onClick={handleExport}
+        className="mt-4 bg-green-500 text-white px-4 py-2 rounded-md"
+        disabled={!societe || !depot}
+      >
+        Exporter le fichier Excel
+      </button>
       {/* Affichage des résultats */}
       {loading && <p className="text-gray-600">Chargement des articles...</p>}
       {error && <p className="text-red-600">{error}</p>}
@@ -222,43 +288,43 @@ function StockListe() {
                 <tr>
                   <th
                     onClick={() => handleSort('id')}
-                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" // Centrer les en-têtes
+                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                   >
                     Code {sortColumn === 'id' && (sortOrder === 'asc' ? '▲' : '▼')}
                   </th>
                   <th
                     onClick={() => handleSort('nom')}
-                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" // Centrer les en-têtes
+                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                   >
                     Nom {sortColumn === 'nom' && (sortOrder === 'asc' ? '▲' : '▼')}
                   </th>
                   <th
                     onClick={() => handleSort('FOU_NOM')}
-                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" // Centrer les en-têtes
+                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                   >
                     Fournisseur {sortColumn === 'FOU_NOM' && (sortOrder === 'asc' ? '▲' : '▼')}
                   </th>
                   <th
                     onClick={() => handleSort('ean')}
-                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" // Centrer les en-têtes
+                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                   >
                     EAN {sortColumn === 'ean' && (sortOrder === 'asc' ? '▲' : '▼')}
                   </th>
                   <th
                     onClick={() => handleSort('stock')}
-                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" // Centrer les en-têtes
+                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                   >
                     Stock {sortColumn === 'stock' && (sortOrder === 'asc' ? '▲' : '▼')}
                   </th>
                   <th
                     onClick={() => handleSort('ART_PAL')}
-                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" // Centrer les en-têtes
+                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                   >
                     Palette {sortColumn === 'ART_PAL' && (sortOrder === 'asc' ? '▲' : '▼')}
                   </th>
                   <th
                     onClick={() => handleSort('ART_LOC')}
-                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" // Centrer les en-têtes
+                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                   >
                     Emplacement {sortColumn === 'ART_LOC' && (sortOrder === 'asc' ? '▲' : '▼')}
                   </th>
@@ -272,7 +338,7 @@ function StockListe() {
                       <td className="px-6 py-4 whitespace-nowrap">{mat.nom || mat.ART_DES}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{mat.referencefour || mat.FOU_NOM}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{mat.ean || mat.ART_EAN}</td>
-                      <td className="px-6 py-4 text-center whitespace-nowrap">{mat.stock || 0}</td> {/* Centrer les données de stock */}
+                      <td className="px-6 py-4 text-center whitespace-nowrap">{mat.stock || 0}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{mat.ART_PAL || ''}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{mat.ART_LOC || ''}</td>
                     </tr>
@@ -289,4 +355,4 @@ function StockListe() {
   );
 }
 
-export default StockListe;
+export default SearchStock;

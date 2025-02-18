@@ -153,7 +153,8 @@ exports.getStock = async (req, res) => {
         }
 
         // Calculer la valeur totale pour ce produit
-        const totalValue = (parseFloat(item.CAT_POI) || 0) * totalStock;
+        const totalValue = ((parseFloat(item.CAT_POI) || 0) / (parseFloat(item.CAT_COL) || 1)) * totalStock;
+
 
         return {
           id: item.ART_COD || '',
@@ -287,7 +288,7 @@ const {
   ART_DPT_L,
   ART_SFA,
   ART_SFA_L,
-  ART_FAM_L,
+  // ART_FAM_L,
   ART_UNV_L,
   CAT_RFF,
   CAT_DSF,
@@ -346,79 +347,117 @@ if (existingProductIndex !== -1) {
   }
 };
 
-// Transférer une palette
-// Dans votre contrôleur (par exemple, controllers/stockController.js)
+// Transférer des articles entre deux palettes
 exports.transferArticles = async (req, res) => {
   try {
-      const { societe, depot, fromPalette, toPalette, products } = req.body;
+    const { societe, depot, fromPalette, toPalette, products } = req.body;
 
-      // Validation des données
-      if (!societe || !depot || !fromPalette || !toPalette || !Array.isArray(products) || products.length === 0) {
-          return res.status(400).json({ error: 'Toutes les données sont requises.' });
+    // Validation des données
+    if (!societe || !depot || !fromPalette || !toPalette || !Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ error: 'Toutes les données sont requises.' });
+    }
+
+    // Construire le chemin vers le fichier de stock
+    const stockFilePath = path.join(__dirname, '..', 'data', 'Stock', `${societe}_${depot}_Stock.xlsx`);
+    if (!fs.existsSync(stockFilePath)) {
+      return res.status(404).json({ error: `Fichier Excel introuvable pour la société "${societe}" et le dépôt "${depot}".` });
+    }
+
+    let stockData = readExcelFile(stockFilePath);
+
+    for (const product of products) {
+      const { ART_COD, ART_EAN, quantity } = product;
+
+      // Validation des données pour chaque produit
+      if (!ART_COD || !ART_EAN || !quantity) {
+        return res.status(400).json({ error: `Données manquantes pour le produit ${ART_COD}.` });
       }
 
-      // Construire le chemin vers le fichier de stock
-      const stockFilePath = path.join(__dirname, '..', 'data', 'Stock', `${societe}_${depot}_Stock.xlsx`);
-      if (!fs.existsSync(stockFilePath)) {
-          return res.status(404).json({ error: `Fichier Excel introuvable pour la société "${societe}" et le dépôt "${depot}".` });
+      const parsedQuantity = parseInt(quantity, 10);
+      if (isNaN(parsedQuantity) || parsedQuantity <= 0) {
+        return res.status(400).json({ error: `Quantité invalide pour le produit ${ART_COD}.` });
       }
 
-      let stockData = readExcelFile(stockFilePath);
+      // Rechercher le produit dans la palette source
+      const productIndexFrom = stockData.findIndex(
+        (item) => item.ART_COD === ART_COD && item.ART_PAL === fromPalette
+      );
 
-      // Mettre à jour les quantités pour chaque produit
-      for (const product of products) {
-          const { ART_COD, ART_EAN, ART_PAL, quantity } = product;
-
-          // Validation des données pour chaque produit
-          if (!ART_COD || !ART_EAN || !ART_PAL || !quantity) {
-              return res.status(400).json({ error: `Données manquantes pour le produit ${ART_COD}.` });
-          }
-
-          const parsedQuantity = parseInt(quantity, 10);
-          if (isNaN(parsedQuantity) || parsedQuantity <= 0) {
-              return res.status(400).json({ error: `La quantité pour le produit ${ART_COD} doit être un nombre positif.` });
-          }
-
-          // Trouver le produit dans le fichier de stock
-          const productIndex = stockData.findIndex(
-              (item) => item.ART_COD === ART_COD && item.ART_PAL === fromPalette
-          );
-
-          if (productIndex === -1) {
-              return res.status(404).json({ error: `Produit ${ART_COD} introuvable dans la palette ${fromPalette}.` });
-          }
-
-          // Vérifier si la quantité disponible est suffisante
-          const availableQuantity = parseInt(stockData[productIndex][`${depot}_QTE`] || 0, 10);
-          if (isNaN(availableQuantity) || availableQuantity < parsedQuantity) {
-              return res.status(400).json({
-                  error: `Quantité insuffisante pour le produit ${ART_COD}. Disponible : ${availableQuantity}, Demandée : ${parsedQuantity}.`,
-              });
-          }
-
-          // Mettre à jour la quantité
-          const newQuantity = availableQuantity - parsedQuantity;
-          stockData[productIndex][`${depot}_QTE`] = newQuantity.toString();
-
-          // Supprimer la ligne si la quantité devient zéro ou moins
-          if (newQuantity <= 0) {
-              stockData.splice(productIndex, 1);
-          }
+      if (productIndexFrom === -1) {
+        return res.status(404).json({ error: `Produit ${ART_COD} introuvable dans la palette ${fromPalette}.` });
       }
 
-      // Enregistrer les modifications dans le fichier de stock
-      writeExcelFile(stockFilePath, stockData);
+      // Vérifier si la quantité disponible est suffisante
+      const availableQuantity = parseInt(stockData[productIndexFrom][`${depot}_QTE`] || 0, 10);
+      if (isNaN(availableQuantity) || availableQuantity < parsedQuantity) {
+        return res.status(400).json({
+          error: `Quantité insuffisante pour le produit ${ART_COD}. Disponible : ${availableQuantity}, Demandée : ${parsedQuantity}.`,
+        });
+      }
 
-      res.status(200).json({ message: 'Transfert réussi.' });
+      // Conserver les informations du produit avant modification
+      const productInfo = { ...stockData[productIndexFrom] };
+
+      // Mettre à jour la quantité dans la palette source
+      const newQuantityFrom = availableQuantity - parsedQuantity;
+      if (newQuantityFrom > 0) {
+        stockData[productIndexFrom][`${depot}_QTE`] = newQuantityFrom.toString();
+      } else {
+        // Supprimer la ligne si la quantité devient zéro
+        stockData.splice(productIndexFrom, 1);
+      }
+
+      // Rechercher le produit dans la palette destination
+      const productIndexTo = stockData.findIndex(
+        (item) => item.ART_COD === ART_COD && item.ART_PAL === toPalette
+      );
+
+      if (productIndexTo !== -1) {
+        // Mettre à jour la quantité existante dans la palette destination
+        const currentQuantityTo = parseInt(stockData[productIndexTo][`${depot}_QTE`] || 0, 10);
+        stockData[productIndexTo][`${depot}_QTE`] = (currentQuantityTo + parsedQuantity).toString();
+      } else {
+        // Ajouter une nouvelle ligne pour le produit dans la palette destination
+        const newProductTo = {
+          ...productInfo, // Copier toutes les informations du produit
+          ART_PAL: toPalette, // Mettre à jour la palette destination
+          ART_LOC: getPaletteLocation(toPalette, stockData) || productInfo.ART_LOC, // Emplacement de la palette destination
+          [`${depot}_QTE`]: parsedQuantity.toString(), // Quantité transférée
+        };
+
+        // Supprimer les colonnes _QTE inutiles
+        Object.keys(newProductTo).forEach((key) => {
+          if (key.endsWith('_QTE') && key !== `${depot}_QTE`) {
+            delete newProductTo[key];
+          }
+        });
+
+        stockData.push(newProductTo);
+      }
+    }
+
+    // Enregistrer les modifications dans le fichier de stock
+    writeExcelFile(stockFilePath, stockData);
+
+    res.status(200).json({ message: 'Transfert réussi.' });
   } catch (error) {
-      console.error('Erreur lors du transfert des articles :', error);
-      res.status(500).json({ error: error.message || 'Erreur interne du serveur.' });
+    console.error('Erreur lors du transfert des articles :', error.message);
+    res.status(500).json({ error: error.message || 'Erreur interne du serveur.' });
   }
 };
 
+// Fonction pour récupérer l'emplacement d'une palette
+function getPaletteLocation(palette, stockData) {
+  const existingItem = stockData.find((item) => item.ART_PAL === palette);
+  return existingItem ? existingItem.ART_LOC : null; // Retourner null si l'emplacement n'est pas défini
+}
 
-// Sortir un produit
-// Sortir un produit
+// Fonction pour récupérer l'emplacement d'une palette
+function getPaletteLocation(palette, stockData) {
+  const existingItem = stockData.find((item) => item.ART_PAL === palette);
+  return existingItem ? existingItem.ART_LOC : 'A15'; // Par défaut, utiliser "A15" si l'emplacement n'est pas défini
+}
+
 // Sortir un produit
 exports.outProduct = async (req, res) => {
   try {
@@ -559,6 +598,110 @@ exports.exportExcel = async (req, res) => {
     writeExcelFile(exportFilePath, stockData);
 
     res.status(200).json({ message: 'Données exportées avec succès.', filePath: exportFilePath });
+  } catch (error) {
+    console.error('Erreur lors de l\'exportation des données :', error.message);
+    res.status(500).json({ error: 'Erreur interne du serveur.' });
+  }
+};
+
+// Transférer une palette vers un nouvel emplacement
+exports.transferPaletteLocation = async (req, res) => {
+  try {
+    const { societe, depot, fromPalette, toLocation } = req.body;
+
+    // Validation des données
+    if (!societe || !depot || !fromPalette || !toLocation) {
+      return res.status(400).json({ error: 'Toutes les données sont requises.' });
+    }
+
+    // Construire le chemin vers le fichier de stock
+    const stockFilePath = path.join(__dirname, '..', 'data', 'Stock', `${societe}_${depot}_Stock.xlsx`);
+    if (!fs.existsSync(stockFilePath)) {
+      return res.status(404).json({ error: `Fichier Excel introuvable pour la société "${societe}" et le dépôt "${depot}".` });
+    }
+
+    let stockData = readExcelFile(stockFilePath);
+
+    // Mettre à jour l'emplacement pour tous les produits associés à la palette source
+    const updatedStockData = stockData.map((item) => {
+      if (item.ART_PAL === fromPalette) {
+        // Créer ou mettre à jour l'emplacement
+        item.ART_LOC = toLocation;
+      }
+      return item;
+    });
+
+    // Enregistrer les modifications dans le fichier de stock
+    writeExcelFile(stockFilePath, updatedStockData);
+
+    res.status(200).json({ message: 'Transfert d\'emplacement réussi.' });
+  } catch (error) {
+    console.error('Erreur lors du transfert d\'emplacement :', error.message);
+    res.status(500).json({ error: error.message || 'Erreur interne du serveur.' });
+  }
+};
+
+// Rechercher l'emplacement actuel d'une palette
+exports.searchPaletteLocation = async (req, res) => {
+  try {
+    const { societe, depot, ART_PAL } = req.query;
+
+    if (!societe || !depot || !ART_PAL) {
+      return res.status(400).json({ error: 'Paramètres "societe", "depot" et "ART_PAL" requis.' });
+    }
+
+    const stockFilePath = path.join(__dirname, '..', 'data', 'Stock', `${societe}_${depot}_Stock.xlsx`);
+    if (!fs.existsSync(stockFilePath)) {
+      return res.status(404).json({ error: `Fichier Excel introuvable pour la société "${societe}" et le dépôt "${depot}".` });
+    }
+
+    const stockData = readExcelFile(stockFilePath);
+
+    const paletteInfo = stockData.find((item) => item.ART_PAL === ART_PAL);
+    if (!paletteInfo) {
+      return res.status(404).json({ error: `Palette ${ART_PAL} introuvable.` });
+    }
+
+    res.status(200).json({ location: paletteInfo.ART_LOC });
+  } catch (error) {
+    console.error('Erreur lors de la recherche de l\'emplacement de la palette :', error.message);
+    res.status(500).json({ error: 'Erreur interne du serveur.' });
+  }
+};
+// Exporter les données de stock en Excel pour une société et un dépôt spécifiques
+exports.exportStock = async (req, res) => {
+  try {
+    const { societe, depot } = req.body;
+
+    // Validation des paramètres
+    if (!societe || !depot) {
+      return res.status(400).json({ error: 'Paramètres "societe" et "depot" requis.' });
+    }
+
+    // Construire le chemin vers le fichier de stock
+    const stockFilePath = path.join(__dirname, '..', 'data', 'Stock', `${societe}_${depot}_Stock.xlsx`);
+    if (!fs.existsSync(stockFilePath)) {
+      return res.status(404).json({ error: `Fichier Excel introuvable pour la société "${societe}" et le dépôt "${depot}".` });
+    }
+
+    // Lire les données du fichier Excel
+    const stockData = readExcelFile(stockFilePath);
+
+    // Générer un nouveau fichier Excel pour l'export
+    const exportFileName = `${societe}_${depot}_Export.xlsx`;
+    const exportFilePath = path.join(__dirname, '..', 'data', exportFileName);
+    writeExcelFile(exportFilePath, stockData);
+
+    // Envoyer le fichier en tant que réponse
+    res.download(exportFilePath, exportFileName, (err) => {
+      if (err) {
+        console.error('Erreur lors du téléchargement du fichier :', err.message);
+        res.status(500).json({ error: 'Erreur interne du serveur.' });
+      } else {
+        // Supprimer le fichier après le téléchargement (optionnel)
+        fs.unlinkSync(exportFilePath);
+      }
+    });
   } catch (error) {
     console.error('Erreur lors de l\'exportation des données :', error.message);
     res.status(500).json({ error: 'Erreur interne du serveur.' });

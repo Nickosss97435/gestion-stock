@@ -80,6 +80,16 @@ function Sidebar({ isOpen, toggleSidebar }) {
               {isOpen && "Transfére"}
             </Link>
           </li>
+          {/* Transfert */}
+          <li className="mb-4">
+            <Link
+              to="transfer-palette"
+              className="flex items-center text-gray-400 hover:text-white rounded-lg transition-colors"
+            >
+              <FaBox className={`${isOpen ? 'mr-2 text-xl' : 'mx-auto text-4xl'}`} />
+              {isOpen && "Transfére de palette"}
+            </Link>
+          </li>
           {/* Sortie */}
            <li className="mb-4">
             <Link

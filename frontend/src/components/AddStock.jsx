@@ -5,7 +5,7 @@ function ProductForm({ onAddProduct }) {
   const [product, setProduct] = useState({
     ART_COD: '',
     ART_EAN: '',
-    quantity: '', // Quantité
+    quantity: '',
     ART_PAL: '',
     ART_LOC: '',
     societe: '',
@@ -16,12 +16,12 @@ function ProductForm({ onAddProduct }) {
   const [palette, setPalette] = useState([]);
   const [locations, setLocations] = useState([]);
   const [depotsList, setDepots] = useState([]);
-  const [loading, setLoading] = useState(false); // Indicateur de chargement
-  const [error, setError] = useState(null); // Gestion des erreurs
-  const [searching, setSearching] = useState(false); // Indicateur de recherche
-  const [productsList, setProductsList] = useState([]); // Liste des produits à valider
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [productsList, setProductsList] = useState([]);
+  const [searchTimeout, setSearchTimeout] = useState(null);
 
-  // Récupérer la liste des dépôts disponibles
   const fetchDepots = async () => {
     try {
       if (!product.societe) return;
@@ -35,9 +35,6 @@ function ProductForm({ onAddProduct }) {
     }
   };
 
-  // Méthode pour rechercher un produit avec un délai (debounce)
-  const [searchTimeout, setSearchTimeout] = useState(null);
-
   const fetchProductData = async (field, value) => {
     setSearching(true);
     setError(null);
@@ -49,12 +46,12 @@ function ProductForm({ onAddProduct }) {
 
       const { ART_COD, ART_DES, FOU_NOM, ART_EAN } = response.data;
 
-      setProduct((prevProduct) => ({
+      setProduct(prevProduct => ({
         ...prevProduct,
         ART_COD: field === 'ART_EAN' ? ART_COD || '' : prevProduct.ART_COD,
         ART_DES: ART_DES || '',
         FOU_NOM: FOU_NOM || '',
-        ART_EAN: ART_EAN || '',
+        ART_EAN: field === 'ART_COD' ? ART_EAN || '' : prevProduct.ART_EAN,
       }));
     } catch (err) {
       if (err.response && err.response.status === 404) {
@@ -68,26 +65,39 @@ function ProductForm({ onAddProduct }) {
     }
   };
 
-  // Gérer les changements dans les champs du formulaire
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    setProduct((prevProduct) => {
+    // Convertir la valeur en majuscules automatiquement
+    const uppercasedValue = value.toUpperCase();
+   if (name === 'reference') {
+      setReference(uppercasedValue);
+    } else if (name === 'referencefour') {
+      setReferencefour(uppercasedValue);
+    } else if (name === 'designation') {
+      setDesignation(uppercasedValue);
+    } else if (name === 'codeBarre') {
+      setCodeBarre(uppercasedValue);
+    } else if (name === 'palettes') {
+      setPalettes(uppercasedValue);
+    } else if (name === 'locations') {
+      setLocations(uppercasedValue);
+    }
+
+    setProduct(prevProduct => {
       const updatedProduct = { ...prevProduct, [name]: value };
 
-      // Si ART_EAN est modifié, déclenchez une recherche après un délai
       if (name === 'ART_EAN') {
-        clearTimeout(searchTimeout); // Annulez toute recherche précédente
+        clearTimeout(searchTimeout);
         setSearchTimeout(
           setTimeout(() => {
-            if (value.length === 13) { // Vérifiez que le code-barres est complet
+            if (value.length === 13) {
               fetchProductData('ART_EAN', value);
             }
-          }, 600) // Attendez 500ms avant de déclencher la recherche
+          }, 600)
         );
       }
 
-      // Si ART_COD est modifié et que ART_DES n'est pas encore rempli, recherchez automatiquement
       if (name === 'ART_COD' && !updatedProduct.ART_DES) {
         fetchProductData('ART_COD', value);
       }
@@ -96,7 +106,6 @@ function ProductForm({ onAddProduct }) {
     });
   };
 
-  // Ajouter un produit à la liste temporaire
   const handleAddProduct = () => {
     if (
       !product.societe ||
@@ -111,7 +120,6 @@ function ProductForm({ onAddProduct }) {
       return;
     }
 
-    // Vérifiez si le produit existe déjà dans la liste
     const existingProductIndex = productsList.findIndex(
       (item) =>
         item.ART_COD === product.ART_COD &&
@@ -123,34 +131,44 @@ function ProductForm({ onAddProduct }) {
       alert('Le produit est déjà dans la liste.');
       return;
     }
-    
 
-    // Ajoutez le produit à la liste temporaire
-    console.log('Avant mise à jour de productsList :', productsList);
-setProductsList((prevList) => [
-  ...prevList,
-  {
-    ART_COD: product.ART_COD,
-    ART_EAN: product.ART_EAN,
-    ART_DES: product.ART_DES,
-    quantity: product.quantity,
-    ART_PAL: product.ART_PAL,
-    ART_LOC: product.ART_LOC,
-  },
-]);
-console.log('Après mise à jour de productsList :', productsList);
+    const newProduct = {
+      ART_COD: product.ART_COD,
+      ART_EAN: product.ART_EAN,
+      ART_DES: product.ART_DES,
+      quantity: product.quantity,
+      ART_PAL: product.ART_PAL,
+      ART_LOC: product.ART_LOC,
+    };
 
-    // Réinitialisez uniquement les champs qui doivent être vides
-    setProduct((prevProduct) => ({
-      ...prevProduct,
+    setProductsList(prevList => [...prevList, newProduct]);
+
+    // Réinitialisation uniquement des champs produit
+    const { societe, depots, ART_PAL, ART_LOC } = product;
+    setProduct({
+      societe,
+      depots,
+      ART_PAL,
+      ART_LOC,
       ART_COD: '',
       ART_EAN: '',
-      quantity: '',
       ART_DES: '',
-    }));
+      quantity: '',
+    });
   };
 
-  // Soumettre tous les produits ajoutés
+  const handleEdit = (index) => {
+    const productToEdit = productsList[index];
+    setProduct(prev => ({
+      ...prev,
+      ART_COD: productToEdit.ART_COD,
+      ART_EAN: productToEdit.ART_EAN,
+      ART_DES: productToEdit.ART_DES,
+      quantity: productToEdit.quantity,
+    }));
+    setProductsList(prevList => prevList.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -163,7 +181,6 @@ console.log('Après mise à jour de productsList :', productsList);
     setError(null);
 
     try {
-      // Envoyer la liste des produits au backend
       const response = await axios.post(
         'http://10.10.0.20:5000/api/v1/stock/add-product',
         {
@@ -174,8 +191,8 @@ console.log('Après mise à jour de productsList :', productsList);
       );
 
       onAddProduct(response.data);
-
-      // Réinitialiser complètement le formulaire après validation
+      
+      // Réinitialisation complète uniquement après la validation
       setProduct({
         ART_COD: '',
         ART_EAN: '',
@@ -200,7 +217,6 @@ console.log('Après mise à jour de productsList :', productsList);
     }
   };
 
-  // Charger les données initiales
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -213,14 +229,19 @@ console.log('Après mise à jour de productsList :', productsList);
     loadData();
   }, [product.societe]);
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Empêche la soumission du formulaire
+      // handleAddProduct(); // Ajoute le produit au tableau
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Affichage d'un message de chargement si les données ne sont pas encore disponibles */}
-      {loading && <p>Validation en cours...</p>}
+      {loading && <p>Chargement...</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {searching && <p>Recherche en cours...</p>}
 
-      {/* Ligne 1 : Société et Dépôt */}
       <div className="flex flex-wrap gap-4">
         <div className="flex-1 md:w-1/2">
           <label className="text-blue-900 block text-sm font-medium mb-1">Société :</label>
@@ -246,24 +267,22 @@ console.log('Après mise à jour de productsList :', productsList);
             disabled={!depotsList.length}
             className="text-blue-900 w-full p-2 border rounded-md"
           >
-            <option value="" disabled>{!depotsList.length ? 'Chargement...' : 'Choisir un dépôt'}</option>
-            {depotsList?.map((depotItem) => (
-              <option key={depotItem} value={depotItem}>
-                {depotItem}
+            <option value="">{!depotsList.length ? 'Chargement...' : 'Choisir un dépôt'}</option>
+            {depotsList?.map((depot) => (
+              <option key={depot} value={depot}>
+                {depot}
               </option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Palette et Emplacement */}
       <div className="flex flex-wrap gap-4">
         <div className="flex-1 md:w-1/2">
           <label className="block text-sm font-medium text-gray-700">Palette (ART_PAL) :</label>
           <input
             type="text"
             name="ART_PAL"
-            placeholder="Numéro de Palette"
             value={product.ART_PAL}
             onChange={handleChange}
             className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
@@ -275,7 +294,6 @@ console.log('Après mise à jour de productsList :', productsList);
           <input
             type="text"
             name="ART_LOC"
-            placeholder="Emplacement"
             value={product.ART_LOC}
             onChange={handleChange}
             className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
@@ -283,135 +301,136 @@ console.log('Après mise à jour de productsList :', productsList);
         </div>
       </div>
 
-      {/* Code Barre (ART_EAN) */}
       <div>
         <label className="block text-sm font-medium text-gray-700">Code Barre (ART_EAN) :</label>
         <input
           type="text"
           name="ART_EAN"
-          placeholder="Code Barre"
           value={product.ART_EAN}
           onChange={handleChange}
+          onKeyDown={handleKeyDown} // Ajoutez cette ligne
           className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
         />
       </div>
 
-      {/* Référence (ART_COD) */}
       <div>
         <label className="block text-sm font-medium text-gray-700">Référence (ART_COD) :</label>
         <input
           type="text"
           name="ART_COD"
-          placeholder="Référence Interne"
           value={product.ART_COD}
           onChange={handleChange}
           className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
         />
       </div>
 
-      {/* Description (ART_DES) */}
       <div>
         <label className="block text-sm font-medium text-gray-700">Description (ART_DES) :</label>
         <input
           type="text"
           name="ART_DES"
-          placeholder="Description"
           value={product.ART_DES || ''}
           readOnly
-          className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
+          className="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-50"
         />
       </div>
 
-      {/* Quantité */}
       <div>
         <label className="block text-sm font-medium text-gray-700">Quantité :</label>
         <input
           type="number"
           name="quantity"
-          placeholder="Quantité"
           value={product.quantity}
           onChange={handleChange}
           className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
         />
       </div>
 
-      {/* Bouton pour ajouter un produit */}
-      <button
-        type="button"
-        onClick={handleAddProduct}
-        className="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600"
-        disabled={loading || !depotsList.length}
-      >
-        Ajouter le produit
-      </button>
+      <div className="flex flex-wrap gap-4">
+        <button
+          type="button"
+          onClick={handleAddProduct}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          disabled={loading}
+        >
+          Ajouter le produit
+        </button>
 
-      {/* Liste des produits ajoutés */}
+        {/* <button
+          type="submit"
+          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          disabled={loading || productsList.length === 0}
+        >
+          Valider tous les produits
+        </button> */}
+      </div>
+
       {productsList.length > 0 && (
         <div className="mt-4">
-          <h3 className="text-sm font-medium text-gray-700">Produits ajoutés :</h3>
-          <table className="min-w-full divide-y divide-gray-200 mt-2">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Palette</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Emplacement</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {productsList.map((prod, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap">{prod.ART_COD}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{prod.ART_DES}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{prod.ART_PAL}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{prod.ART_LOC}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <input
-                      type="number"
-                      value={prod.quantity}
-                      onChange={(e) =>
-                        setProductsList(
-                          productsList.map((item, i) =>
-                            i === index ? { ...item, quantity: e.target.value } : item
-                          )
-                        )
-                      }
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button 
-                      type="button"
-                      onClick={() => handleEdit(index)} 
-                      className="text-blue-600 hover:text-blue-800 mr-2">
-                      Modifier
-                    </button>
-                    <button
-                      className="text-red-600 hover:text-red-900"
-                      onClick={() =>
-                        setProductsList(productsList.filter((_, i) => i !== index))
-                      }
-                    >
-                      Supprimer
-                    </button>
-                  </td>
+          <h3 className="text-lg font-medium">Produits ajoutés ({productsList.length}):</h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Palette</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Emplacement</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantité</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {productsList.map((item, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">{item.ART_COD}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{item.ART_DES}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{item.ART_PAL}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{item.ART_LOC}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{item.quantity}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(index)}
+                        className="text-indigo-600 hover:text-indigo-900 mr-4"
+                      >
+                        Modifier
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveProduct(index)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Supprimer
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* Bouton pour valider tous les produits */}
-      <button
-        type="submit"
-        className="bg-green-500 text-white p-2 rounded-md hover:bg-green-600"
-        disabled={!productsList.length}
-      >
-        Valider tous les produits
-      </button>
+      {/* Boutons */}
+      <div className="flex space-x-4">
+        {/* <button
+          type="button"
+          onClick={handleAddProduct}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          disabled={loading}
+        >
+          Ajouter le produit
+        </button> */}
+        
+        <button
+          type="submit"
+          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          disabled={loading || productsList.length === 0}
+        >
+          Valider tous les produits
+        </button>
+      </div>
     </form>
   );
 }
